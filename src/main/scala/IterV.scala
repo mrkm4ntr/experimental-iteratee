@@ -28,7 +28,25 @@ case class Cont[E, A](step: StreamG[E] => IterV[E, A]) extends IterV[E, A] {
     Iteratee(implicitly[Monad[F]].point(ContM[E, F, A]{ str => step(str).liftIter[F] }))
 }
 
-object MonadInstance {
+object IterV {
+  def head[E]: IterV[E, Option[E]] = {
+    def step: StreamG[E] => IterV[E, Option[E]] = {
+      case El(el) => Done(Some(el), Empty)
+      case Empty => Cont(step)
+      case EOF => Done(None, EOF)
+    }
+    Cont(step)
+  }
+
+  def length[E]: IterV[E, Int] = {
+    def step[E](acc: Int): StreamG[E] => IterV[E, Int] = {
+      case El(el) => Cont(step(acc + 1))
+      case Empty => Cont(step(acc))
+      case EOF => Done(acc, EOF)
+    }
+    Cont(step(0))
+  }
+
   implicit def IterVMonad[E] = new Monad[({type X[A] = IterV[E, A]})#X] {
     def point[A](a: => A) = Done(a, Empty)
     def bind[A, B](fa: IterV[E, A])(f: A => IterV[E, B]): IterV[E, B] = fa match {

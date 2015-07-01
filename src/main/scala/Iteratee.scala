@@ -4,23 +4,23 @@ import scalaz._
 import Scalaz._
 
 sealed trait IterVM[E, F[_], A] {
-  //def run: F[Option[A]]
+  def run: Option[A]
 }
 
 case class Iteratee[E, F[_]: Monad, A](runIter: F[IterVM[E, F, A]]) {
-  /*def $$(enum: Enumrator[E, F, A]): Iteratee[E, F, A] =
-    Iteratee { implicitly[Monad[F]].bind(this.runIter)(enum) }*/
+  def $$(enum: Enumrator[E, F, A]): Iteratee[E, F, A] = Iteratee { implicitly[Monad[F]].bind(runIter)(enum.unwrap) }
+  def run: F[Option[A]] = runIter.map(_.run)
 }
 
 case class DoneM[E, F[_], A](a: A, str: StreamG[E]) extends IterVM[E, F, A] {
-  //def run = implicitly[Monad[F]].point(a.some)
+  def run = a.some
 }
 
 case class ContM[E, F[_], A](step: StreamG[E] => Iteratee[E, F, A]) extends IterVM[E, F, A] {
-  /*def run = implicitly[Monad[F]].point[Option[A]](step(EOF).runIter match {
+  def run = step(EOF).runIter match {
     case DoneM(a: A, _) => Some(a)
     case _ => None
-  })*/
+  }
 }
 
 object Instances {
@@ -53,20 +53,5 @@ object Instances {
         })
       }
     }*/
-  }
-}
-
-object EB {
-  def head[F[_]: Monad]: Iteratee[Char, F, Option[Int]] = {
-    def step(el: StreamG[Char]): Iteratee[Char, F, Option[Int]] = Iteratee {
-      implicitly[Monad[F]].point(
-        el match {
-          case El(el) => DoneM[Char, F, Option[Int]](Some(el.toInt), Empty)
-          case Empty => ContM[Char, F, Option[Int]](step)
-          case EOF => DoneM[Char, F, Option[Int]](None, EOF)
-        }
-      )
-    }
-    Iteratee { implicitly[Monad[F]].point(ContM(step)) }
   }
 }
