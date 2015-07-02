@@ -4,22 +4,22 @@ import scalaz._
 import Scalaz._
 
 sealed trait IterVM[E, F[_], A] {
-  def run: Option[A]
+  def run: F[Option[A]]
 }
 
 case class Iteratee[E, F[_]: Monad, A](runIter: F[IterVM[E, F, A]]) {
   def $$(enum: Enumerator[E, F, A]): Iteratee[E, F, A] = Iteratee { implicitly[Monad[F]].bind(runIter)(enum.unwrap) }
-  def run: F[Option[A]] = runIter.map(_.run)
+  def run: F[Option[A]] = runIter.flatMap(_.run)
 }
 
-case class DoneM[E, F[_], A](a: A, str: StreamG[E]) extends IterVM[E, F, A] {
-  def run = a.some
+case class DoneM[E, F[_]: Monad, A](a: A, str: StreamG[E]) extends IterVM[E, F, A] {
+  def run = implicitly[Monad[F]].point(a.some)
 }
 
-case class ContM[E, F[_], A](step: StreamG[E] => Iteratee[E, F, A]) extends IterVM[E, F, A] {
-  def run = step(EOF).runIter match {
-    case DoneM(a: A, _) => Some(a)
-    case _ => None
+case class ContM[E, F[_]: Monad, A](step: StreamG[E] => Iteratee[E, F, A]) extends IterVM[E, F, A] {
+  def run = implicitly[Monad[F]].bind(step(EOF).runIter) {
+    case DoneM(a, _) => implicitly[Monad[F]].point(a.some)
+    case _ => implicitly[Monad[F]].point(None)
   }
 }
 

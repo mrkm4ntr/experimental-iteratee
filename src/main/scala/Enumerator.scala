@@ -17,7 +17,7 @@ object Enumerator {
       case DoneM(_, _) => implicitly[Monad[F]].point(iter)
       case ContM(s) => l match {
         case Nil => implicitly[Monad[F]].point(iter)
-        case x :: xs => s(El(x)).runIter.flatMap(loop(xs))
+        case x :: xs => s(El(x)).runIter >>= loop(xs)
       }
     }
     Enumerator(loop(l))
@@ -29,7 +29,7 @@ object Enumerator {
       case ContM(s) => {
         val i = bf.read()
         if (i == -1) iter.point[IO]
-        else s(El(i.toChar)).runIter
+        else s(El(i.toChar)).runIter >>= loop
       }
     }
     Enumerator(loop)
