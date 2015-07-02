@@ -8,7 +8,7 @@ sealed trait IterVM[E, F[_], A] {
 }
 
 case class Iteratee[E, F[_]: Monad, A](runIter: F[IterVM[E, F, A]]) {
-  def $$(enum: Enumrator[E, F, A]): Iteratee[E, F, A] = Iteratee { implicitly[Monad[F]].bind(runIter)(enum.unwrap) }
+  def $$(enum: Enumerator[E, F, A]): Iteratee[E, F, A] = Iteratee { implicitly[Monad[F]].bind(runIter)(enum.unwrap) }
   def run: F[Option[A]] = runIter.map(_.run)
 }
 
